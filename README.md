@@ -12,6 +12,9 @@ Loongmen-Neo is a powerful tool designed to detect potential copyright infringem
 - **Detailed Reports**: Generates comprehensive reports with matching results, including similarity scores and relevant text excerpts.
 - **Scalable**: Designed to handle large volumes of text data, making it suitable for both small-scale and enterprise-level applications.
 
+## Snapshot
+![snapshot](https://github.com/lizi-cl/loongmen-neo/blob/main/assets/result.png?raw=true)
+
 ## Installation
 
 To get started with Loongmen-Neo, follow these steps:
