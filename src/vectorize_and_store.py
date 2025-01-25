@@ -3,51 +3,70 @@ import glob
 import ollama
 import weaviate
 import logging
+from weaviate.auth import AuthApiKey
+from weaviate.classes.config import Property, DataType
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 def initialize_weaviate():
-    """初始化 Weaviate 客户端并创建 schema"""
+    """初始化 Weaviate 客户端并创建 Collection"""
     logger.info("Initializing Weaviate client...")
-    client = weaviate.Client("http://localhost:8080")
+    
+    # 连接到本地 Weaviate 实例
+    client = weaviate.connect_to_local()
     logger.info("Weaviate client initialized.")
 
-    # 定义 Weaviate 的 schema
-    schema = {
-        "classes": [
-            {
-                "class": "Document",
-                "description": "A document with text content",
-                "properties": [
-                    {
-                        "name": "filename",
-                        "dataType": ["string"],
-                        "description": "The name of the file",
-                    },
-                    {
-                        "name": "content",
-                        "dataType": ["text"],
-                        "description": "The content of the document",
-                    },
-                    {
-                        "name": "vector",
-                        "dataType": ["number[]"],
-                        "description": "The embedding vector of the document",
-                    },
-                ],
-            }
-        ]
-    }
+    # 检查 Collection 是否已存在
+    if client.collections.exists("Document"):
+        logger.info("Collection 'Document' already exists.")
+    else:
+        # 定义 Collection 的 Schema
+        schema = {
+            "class": "Document",
+            "properties": [
+                Property(name="filename", data_type=DataType.TEXT),
+                Property(name="chunk_id", data_type=DataType.INT),
+                Property(name="content", data_type=DataType.TEXT),
+            ],
+        }
 
-    # 创建 Weaviate schema
-    logger.info("Creating Weaviate schema...")
-    client.schema.create(schema)
-    logger.info("Weaviate schema created.")
+        # 创建 Collection
+        logger.info("Creating Collection...")
+        client.collections.create(
+            name="Document",
+            properties=schema["properties"]
+        )
+        logger.info("Collection created.")
+    
     return client
 
-def vectorize_and_store_txt_files(directory, client):
+def split_by_fixed_length(text, chunk_size=200):
+    """按固定长度分段"""
+    return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+
+def split_by_sentences(text):
+    """按句子分段"""
+    from nltk.tokenize import sent_tokenize
+    return sent_tokenize(text)
+
+def split_by_paragraphs(text):
+    """按段落分段"""
+    return [p.strip() for p in text.split("\n\n") if p.strip()]
+
+def split_text_into_chunks(text, strategy="fixed_length", **kwargs):
+    """根据策略将文本分段"""
+    if strategy == "fixed_length":
+        return split_by_fixed_length(text, **kwargs)
+    elif strategy == "sentences":
+        return split_by_sentences(text)
+    elif strategy == "paragraphs":
+        return split_by_paragraphs(text)
+    else:
+        raise ValueError(f"Unknown strategy: {strategy}")
+
+def vectorize_and_store_txt_files(directory, client, strategy="fixed_length", **kwargs):
     """读取并向量化所有 .txt 文件，存储到 Weaviate"""
     logger.info(f"Starting to vectorize and store .txt files from directory: {directory}")
     for filepath in glob.glob(os.path.join(directory, "*.txt")):
@@ -56,20 +75,41 @@ def vectorize_and_store_txt_files(directory, client):
             content = file.read()
             filename = os.path.basename(filepath)
             
-            # 使用 Ollama 生成嵌入向量
-            logger.info(f"Generating embedding for file: {filename}")
-            embedding = ollama.embed("bge-m3", content)
-            logger.info(f"Embedding generated for file: {filename}")
+            # 将文本分段
+            chunks = split_text_into_chunks(content, strategy=strategy, **kwargs)
+            logger.info(f"Split file into {len(chunks)} chunks using strategy: {strategy}")
             
-            # 将文档存储到 Weaviate
-            logger.info(f"Storing document in Weaviate: {filename}")
-            client.data_object.create(
-                data_object={
+            # 获取 Collection
+            documents = client.collections.get("Document")
+            
+            # 对每个分段生成嵌入向量并存储
+            for chunk_id, chunk in enumerate(chunks):
+                logger.info(f"Generating embedding for chunk {chunk_id + 1} of file: {filename}")
+                
+                # 使用 Ollama 生成嵌入向量
+                embedding_result = ollama.embed("bge-m3", chunk)
+                
+                # 提取嵌入向量
+                embedding = embedding_result.get('embeddings', [])[0] if embedding_result and 'embeddings' in embedding_result else None
+                
+                # 确保向量是一维浮点数列表
+                if not isinstance(embedding, list) or not all(isinstance(x, float) for x in embedding):
+                    logger.error(f"Invalid vector format for chunk {chunk_id + 1}: {embedding}")
+                    continue
+                
+                logger.info(f"Embedding generated for chunk {chunk_id + 1} of file: {filename}")
+                
+                # 将分段存储到 Weaviate
+                data_object = {
                     "filename": filename,
-                    "content": content,
-                    "vector": embedding,
-                },
-                class_name="Document",
-            )
-            logger.info(f"Document stored in Weaviate: {filename}")
+                    "chunk_id": chunk_id,
+                    "content": chunk,
+                }
+                
+                logger.info(f"Storing chunk {chunk_id + 1} in Weaviate: {filename}")
+                documents.data.insert(
+                    properties=data_object,
+                    vector=embedding  # 直接传入向量
+                )
+                logger.info(f"Chunk {chunk_id + 1} stored in Weaviate: {filename}")
     logger.info("Finished vectorizing and storing .txt files.")

@@ -1,0 +1,14 @@
+version: '3.4'
+services:
+  weaviate:
+    image: semitechnologies/weaviate:latest
+    ports:
+      - "8080:8080"  # REST API 端口
+      - "50051:50051"  # gRPC 端口
+    environment:
+      - "AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true"
+      - "PERSISTENCE_DATA_PATH=/var/lib/weaviate"
+      - "GRPC_ENABLED=true"
+      - "GRPC_PORT=50051"
+    volumes:
+      - /e/code/loongmen-neo/weaviate:/var/lib/weaviate
