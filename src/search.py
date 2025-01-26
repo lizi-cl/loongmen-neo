@@ -2,19 +2,16 @@ import ollama
 import weaviate
 import logging
 import weaviate.classes as wvc
-from weaviate.auth import AuthApiKey
+from weaviate.embedded import EmbeddedOptions
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-def search_similar_documents(query, top_k=5, threshold=0.5):
+def search_similar_documents(query, client ,top_k=5, threshold=0.5):
     """检索与查询字符串最相似的文档分段"""
     logger.info(f"Starting search for query: {query}")
-    
-    # 连接到本地 Weaviate 实例
-    client = weaviate.connect_to_local()
-    
+     
     # 生成查询字符串的嵌入向量
     logger.info("Generating embedding for query...")
     # 使用 Ollama 生成嵌入向量

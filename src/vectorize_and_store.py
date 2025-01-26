@@ -3,44 +3,12 @@ import glob
 import ollama
 import weaviate
 import logging
-from weaviate.auth import AuthApiKey
+from weaviate.embedded import EmbeddedOptions
 from weaviate.classes.config import Property, DataType
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
-
-def initialize_weaviate():
-    """初始化 Weaviate 客户端并创建 Collection"""
-    logger.info("Initializing Weaviate client...")
-    
-    # 连接到本地 Weaviate 实例
-    client = weaviate.connect_to_local()
-    logger.info("Weaviate client initialized.")
-
-    # 检查 Collection 是否已存在
-    if client.collections.exists("Document"):
-        logger.info("Collection 'Document' already exists.")
-    else:
-        # 定义 Collection 的 Schema
-        schema = {
-            "class": "Document",
-            "properties": [
-                Property(name="filename", data_type=DataType.TEXT),
-                Property(name="chunk_id", data_type=DataType.INT),
-                Property(name="content", data_type=DataType.TEXT),
-            ],
-        }
-
-        # 创建 Collection
-        logger.info("Creating Collection...")
-        client.collections.create(
-            name="Document",
-            properties=schema["properties"]
-        )
-        logger.info("Collection created.")
-    
-    return client
 
 def split_by_fixed_length(text, chunk_size=200):
     """按固定长度分段"""

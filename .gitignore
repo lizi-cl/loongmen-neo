@@ -172,5 +172,5 @@ cython_debug/
 .conda/
 
 data/
-/weaviate/
+/weaviate_db/
 bin/
