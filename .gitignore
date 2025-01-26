@@ -173,4 +173,3 @@ cython_debug/
 
 data/
 /weaviate_db/
-bin/

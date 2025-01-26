@@ -1,2 +1,3 @@
 ollama
 weaviate-client
+nltk

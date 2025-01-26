@@ -14,7 +14,7 @@ def initialize_weaviate(vec=False):
     """初始化 Weaviate 客户端并创建 Collection"""
     logger.info("Initializing Weaviate client...")
     
-    # 连接到本地 Weaviate 实例
+    # 连接到本地 Weaviate 实例, 下载Weaviate二进制文件
     client = weaviate.WeaviateClient(
         embedded_options=EmbeddedOptions(
             binary_path="./bin/",
@@ -56,7 +56,7 @@ def vectorize_and_store():
 
     # 删除所有文档
     response = collection.data.delete_many(
-        where=Filter.by_property("property_name").like("*")
+        where=Filter.by_property("filename").like("*")
     )
 
     # 向量化并存储 .txt 文件
