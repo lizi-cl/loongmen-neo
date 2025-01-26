@@ -1,5 +1,6 @@
 import logging
 import weaviate
+from weaviate.classes.query import Filter
 from vectorize_and_store import vectorize_and_store_txt_files
 from search import search_similar_documents, close_weaviate_client
 from weaviate.embedded import EmbeddedOptions
@@ -50,6 +51,13 @@ def initialize_weaviate(vec=False):
 def vectorize_and_store():
     # 初始化 Weaviate 并创建 Collection
     client = initialize_weaviate(True)
+
+    collection = client.collections.get("Document")
+
+    # 删除所有文档
+    response = collection.data.delete_many(
+        where=Filter.by_property("property_name").like("*")
+    )
 
     # 向量化并存储 .txt 文件
     txt_files_directory = "data"  # 存放 .txt 文件的目录
