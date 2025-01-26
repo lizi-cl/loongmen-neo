@@ -86,10 +86,10 @@ def search(query, threshold=0.2):
 
 
 def main():
-    # 向量化并存储 .txt 文件
-    # vectorize_and_store()
+    # Step1 : 向量化并存储 .txt 文件
+    vectorize_and_store()
 
-    # 检索与查询字符串最相似的文档分段
+    # Step2 : 检索与查询字符串最相似的文档分段
     query = "Mr. and Mrs. Dursley, of number four, Privet Drive, were proud to say that they were perfectly normal, thank you very much. They were the last people you'd expect to be involved in anything strange"
     search(query)
 
